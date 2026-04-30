@@ -405,17 +405,13 @@
 
 <script>
 const BACKEND_SCAN_URL = 'https://currency-converter-xy45.onrender.com/api/scan';
-const BACKEND_CONVERT_URL = 'https://currency-converter-xy45.onrender.com/api/convert';
 
 let stream = null;
 let scanInterval = null;
 let isProcessing = false;
 
 let lastDetected = null;
-let lastAmount = null;
-
-let detectionBuffer = [];
-let convertTimeout = null;
+let lastUpdate = 0;
 
 // ── START CAMERA ─────────────────────────
 async function startCamera() {
@@ -474,7 +470,7 @@ function startAutoScan() {
     try {
       const ctx = canvas.getContext('2d');
 
-      // 🔥 Resize for performance
+      // Resize for performance
       const targetWidth = 640;
       const scale = targetWidth / video.videoWidth;
 
@@ -498,15 +494,27 @@ function startAutoScan() {
       });
 
       const data = await res.json();
+      console.log("SCAN RESPONSE:", data);
 
-      if (data.amount &&
-          isStable(data.amount) &&
-          data.amount !== lastDetected) {
+      // ✅ Directly use scan response (no convert API)
+      if (data.amount && data.convertedAmount) {
+
+        // prevent duplicate UI updates
+        if (data.amount === lastDetected) {
+          isProcessing = false;
+          return;
+        }
+
+        // simple debounce (avoid flicker)
+        if (Date.now() - lastUpdate < 1500) {
+          isProcessing = false;
+          return;
+        }
 
         lastDetected = data.amount;
-        lastAmount = data.amount;
+        lastUpdate = Date.now();
 
-        triggerConvert();
+        showResult(data);
       }
 
     } catch (e) {
@@ -518,65 +526,29 @@ function startAutoScan() {
   }, 2000);
 }
 
-// ── STABLE DETECTION (ANTI-FLICKER) ─────
-function isStable(value) {
-  detectionBuffer.push(value);
-
-  if (detectionBuffer.length > 3) {
-    detectionBuffer.shift();
-  }
-
-  return detectionBuffer.length === 3 &&
-         detectionBuffer.every(v => v === value);
-}
-
-// ── DEBOUNCE CONVERSION ─────────────────
-function triggerConvert() {
-  if (convertTimeout) clearTimeout(convertTimeout);
-
-  convertTimeout = setTimeout(() => {
-    fetchAndShow();
-  }, 400);
-}
-
-// ── FETCH CONVERSION ────────────────────
-async function fetchAndShow() {
-  const from   = document.getElementById('from-currency').value.trim().toUpperCase();
-  const to     = document.getElementById('to-currency').value.trim().toUpperCase();
-  const amount = lastAmount || 1;
-
-  clearResult(false);
-  document.getElementById('loading').classList.add('active');
-
-  try {
-    const res  = await fetch(`${BACKEND_CONVERT_URL}?from=${from}&to=${to}&amount=${amount}`);
-    const data = await res.json();
-
-    document.getElementById('loading').classList.remove('active');
-
-    if (!res.ok || data.error) {
-      showError(data.error || 'Conversion failed');
-      return;
-    }
-
-    showResult(data);
-
-  } catch (e) {
-    document.getElementById('loading').classList.remove('active');
-    showError('Backend not reachable.');
-  }
-}
-
 // ── SHOW RESULT ─────────────────────────
 function showResult(data) {
+  if (!data || !data.convertedAmount) {
+    showError("Invalid response from backend");
+    return;
+  }
+
+  console.log("Rendering UI:", data);
+
   document.getElementById('detected-info').innerHTML =
     `Detected amount: <strong>${data.amount} ${data.from}</strong>`;
 
-  document.getElementById('from-val').textContent = `${data.amount} ${data.from}`;
-  document.getElementById('to-val').textContent   = `${data.convertedAmount} ${data.to}`;
+  document.getElementById('from-val').textContent =
+    `${data.amount} ${data.from}`;
+
+  document.getElementById('to-val').textContent =
+    `${data.convertedAmount.toFixed(2)} ${data.to}`;
+
+  // Optional rate calculation
+  const rate = data.convertedAmount / data.amount;
 
   document.getElementById('rate-from').textContent = data.from;
-  document.getElementById('rate-val').textContent  = data.rate;
+  document.getElementById('rate-val').textContent  = rate.toFixed(4);
   document.getElementById('rate-to').textContent   = data.to;
 
   document.getElementById('result-card').classList.add('visible');
@@ -587,8 +559,6 @@ function swapCurrencies() {
   const f = document.getElementById('from-currency');
   const t = document.getElementById('to-currency');
   [f.value, t.value] = [t.value, f.value];
-
-  if (lastAmount) fetchAndShow();
 }
 
 // ── HELPERS ────────────────────────────
@@ -598,10 +568,9 @@ function showError(msg) {
   el.classList.add('visible');
 }
 
-function clearResult(clearThumb = true) {
+function clearResult() {
   document.getElementById('result-card').classList.remove('visible');
   document.getElementById('error-msg').classList.remove('visible');
-  document.getElementById('loading').classList.remove('active');
 }
 
 // ── AUTO UPPERCASE ─────────────────────
