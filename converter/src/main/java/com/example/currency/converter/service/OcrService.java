@@ -17,7 +17,8 @@ public class OcrService {
         BufferedImage image = ImageIO.read(new ByteArrayInputStream(imageBytes));
 
         Tesseract tesseract = new Tesseract();
-        tesseract.setDatapath("/opt/homebrew/opt/tesseract/share/tessdata");
+        // tesseract.setDatapath("/opt/homebrew/opt/tesseract/share/tessdata");
+        tesseract.setDatapath(System.getenv("TESSERACT_PATH"));
         tesseract.setLanguage("eng");
 
         String result = tesseract.doOCR(image);
