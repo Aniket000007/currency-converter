@@ -2,6 +2,8 @@ FROM eclipse-temurin:17-jdk
 
 RUN apt-get update && apt-get install -y tesseract-ocr
 
+RUN find /usr -name eng.traineddata
+
 WORKDIR /app
 
 COPY . .
