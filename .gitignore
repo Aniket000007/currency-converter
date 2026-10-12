@@ -1,13 +1,32 @@
-# Java
+# Maven build output
 target/
-*.log
+
+# Redis snapshots and append-only files
+dump.rdb
+*.rdb
+*.aof
+appendonlydir/
+
+# Local environment and config
+.env
+.env.local
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.classpath
+.project
+.settings/
+.factorypath
+.sts4-cache/
 
 # OS
 .DS_Store
+Thumbs.db
 
-# IDE
-.vscode/
-*.iml
-
-# Env
-.env
+# Logs
+*.log
+logs/
