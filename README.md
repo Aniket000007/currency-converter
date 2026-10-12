@@ -2,10 +2,7 @@
 
 A web app that reads a price tag through your phone camera and shows the price converted into another currency.
 
-**Live demo:** https://currency-converter-peach-gamma-89.vercel.app
-
-<!-- TODO: record a short screen capture of the camera scan and save it as docs/demo.gif -->
-![Demo](docs/demo.gif)
+**Live demo:** https://currency-converter-two-silk-96.vercel.app/
 
 ## How it works
 
